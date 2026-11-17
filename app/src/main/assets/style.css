@@ -17,7 +17,6 @@ button:hover {filter:brightness(.975)}
 .brandmark{height:46px;width:46px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(135deg,#4984fa,#3567dc);box-shadow:0 7px 17px #4278ec30;color:white}
 .brandmark svg{height:25px;width:25px}
 .brandname{font-size:21px;font-weight:760;letter-spacing:-.045em}
-.brandtag{color:#8592a5;font-size:12px;margin-top:4px;letter-spacing:.06em;font-weight:600;text-transform:uppercase}
 .nav{display:flex;align-items:center;gap:9px;margin-left:auto}
 .nav-pill{display:flex;gap:9px;align-items:center;background:white;border:1px solid var(--border);padding:11px 18px;border-radius:12px;font-size:15px;font-weight:650;min-height:43px}
 .nav-pill svg{width:17px;height:17px}
@@ -90,7 +89,6 @@ button:hover {filter:brightness(.975)}
 .notice{padding:11px 15px;border-radius:9px;background:#fff4ec;color:#a96d3e;font-size:12px;line-height:1.5}
 .pair-screen{height:100%;background:radial-gradient(ellipse at 80% 15%,#eff4ff 0%,transparent 50%),#f7f9fd;display:flex;flex-direction:column;padding:35px 56px 30px;gap:30px}
 .pair-top{height:58px;display:flex;align-items:center;justify-content:space-between}
-.pair-tag{border-radius:100px;padding:11px 17px;background:#eaf1ff;color:#4678da;font-weight:720;font-size:13px}
 .pair-layout{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(300px,.85fr);gap:52px;flex:1;min-height:0;align-items:center;max-width:1500px;width:100%;margin:auto}
 .pair-headline{font-size:clamp(44px,5vw,83px);font-weight:800;line-height:1.07;letter-spacing:-.067em;margin:17px 0 22px}
 .pair-headline em{color:#457bec;font-style:normal}
@@ -111,15 +109,13 @@ button:hover {filter:brightness(.975)}
 .manual{display:flex;flex-direction:column;gap:9px;margin-top:14px;width:100%}
 .manual input{width:100%;background:#fff;border:1px solid #dce5f0;border-radius:12px;font-size:12px;color:#2d4d72;padding:13px 12px}
 .manual button{padding:12px 15px;border-radius:11px;background:#edf3ff;color:#3b72e7;font-weight:700}
-.pair-footer{font-size:12px;color:#a1acbc;display:flex;justify-content:space-between}
-.pair-footer a {color:#6e8dca}
 .loading-indicator{display:inline-block;width:11px;height:11px;border-radius:50%;border:2px solid #9fbaee;border-top-color:#386ee8;animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media(max-width:1000px){
  .app{padding:18px 20px;gap:14px}.main{grid-template-columns:245px minmax(0,1fr);gap:13px}
  .hero{min-height:160px;padding:18px}.hero-title{font-size:29px}.mini{padding:17px}
  .upcoming{padding:17px}.calendar-head{padding:19px}.calendar-h-title{font-size:22px}
- .brandtag{display:none}.pair-layout{gap:22px}.pair-screen{padding:22px}
+ .pair-layout{gap:22px}.pair-screen{padding:22px}
  .pair-headline{font-size:49px}.pair-lead{font-size:15px}
 }
 @media(max-height:700px){
@@ -131,7 +127,7 @@ button:hover {filter:brightness(.975)}
  .qr-card img{max-width:190px}
 }
 
-/* TV-safe pairing layout — v0.2. Fit 720p/1080p without overlapping controls. */
+/* Pairing layout sized to fit 720p and 1080p TVs without overlapping controls. */
 .pair-screen {
   box-sizing:border-box;
   height:100%;
@@ -164,7 +160,6 @@ button:hover {filter:brightness(.975)}
 .manual {margin-top:clamp(4px,1vh,12px);gap:7px}
 .manual input {padding:10px 11px}
 .manual button {padding:10px 13px}
-.pair-footer {display:none}
 @media(max-height:760px) {
   .pair-screen {padding:19px 38px 22px;gap:10px}
   .pair-top {height:40px}

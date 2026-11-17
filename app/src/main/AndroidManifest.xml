@@ -4,7 +4,7 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <uses-feature android:name="android.software.leanback" android:required="false" />
-    <application android:label="Room Calendar" android:theme="@android:style/Theme.Material.Light.NoActionBar"
+    <application android:label="@string/app_name" android:theme="@android:style/Theme.Material.Light.NoActionBar"
         android:usesCleartextTraffic="false" android:allowBackup="false"
         android:banner="@drawable/tv_banner" android:icon="@drawable/app_icon">
         <activity android:name=".MainActivity" android:exported="true"

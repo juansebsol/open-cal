@@ -1,4 +1,4 @@
-package dev.roomcalendar.tv;
+package dev.opencal.tv;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -12,13 +12,13 @@ import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
 
-/** All secrets and cached calendar event details stay on the Android TV. */
+/** AES-GCM encrypted SharedPreferences backed by an Android Keystore key. */
 final class Secrets {
-    private static final String ALIAS = "room_calendar_local_key_v1";
+    private static final String ALIAS = "open_cal_key_v1";
     private final SharedPreferences prefs;
 
     Secrets(Context context) {
-        prefs = context.getSharedPreferences("room_calendar_v1", Context.MODE_PRIVATE);
+        prefs = context.getSharedPreferences("open_cal_v1", Context.MODE_PRIVATE);
     }
 
     private SecretKey key() throws Exception {

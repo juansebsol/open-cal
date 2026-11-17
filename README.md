@@ -1,93 +1,126 @@
-> **v0.2 TV layout update:** Fixed clipping/overlapping on 720p and 1080p screens, compacted QR pairing, removed marketing/footer text. Rebuild and use `adb install -r` to preserve an existing pairing.
+# Open Cal
 
-# Room Calendar TV — local Google Calendar display
+An Android TV / Fire TV app that shows a Google Calendar day view on a TV. It reads the calendar's secret iCal address directly, so there is no backend, no OAuth and no Google API key.
 
-An **Android TV / Amazon Fire TV sideloadable app** that shows a clean, day-first Google Calendar dashboard. Read-only. No proprietary backend, database, paid service, hosted web app, OAuth credentials, or calendar account registration.
+- Day timeline with overlapping events, all-day events, a current-time line, a month view and the next upcoming event
+- Syncs on launch and every 15 minutes while open; the last sync is cached for offline use
+- Pairs by QR code: the TV serves a one-time form on the local network that you open on your phone
+- Feed URL and cached events are encrypted with an Android Keystore key
 
-**Status:** working MVP source project intended for on-device testing. The source has not been tested on a physical Fire TV. Compiling the APK requires Android Studio / Android SDK (see below).
+## Requirements
 
-## What it does
+- JDK 17
+- Android SDK with Platform 35 (installed by Android Studio). Set `ANDROID_HOME`, or add `sdk.dir` to `local.properties`.
+- `adb` (Android SDK platform-tools)
+- A TV running Android TV, Google TV or Fire OS on Android 8.0 (API 26) or later. Fire TV devices on Vega OS cannot run APKs.
 
-- Bundled HTML/CSS/JavaScript daily agenda with big-screen layout, clock, mini month, next meeting, and day navigation.
-- Pulls events directly from Google Calendar's **Secret address in iCal format** over HTTPS, every 15 minutes while the app is open.
-- Handles regular events, all-day events, common repeating RRULE patterns (daily, weekly, monthly, yearly), EXDATE, RDATE, and overridden occurrences.
-- Stores private calendar URL and cached events encrypted using the TV's Android Keystore. No SQLite/database required.
-- TV hosts a short-lived local QR pairing page on `http://TV_LOCAL_IP:8765/connect?...` while pairing. The page is hosted by the APK itself, **not by the developer**.
-- A TV-remote input field is available if QR pairing fails. Preview mode shows clearly labeled sample events.
-- Remote controls: select top controls with D-pad, OK to press; remote Menu opens settings; rewind/fast-forward changes day; Home exits the application.
+## Build
 
-## Important security note
-
-Google's secret iCal URL grants read-only access to your calendar without OAuth. **Treat the URL like a password.** The app stores it encrypted on the TV and fetches from Google using HTTPS. However, the *initial local QR pairing page uses plain HTTP on your Wi-Fi network*. Anyone with access to sniff traffic on that network could potentially capture the address while you submit it. Pair only on a trusted private Wi-Fi. For stronger pairing security, use the TV remote input or extend the app with TLS/secure pairing. There is no cloud proxy or analytics service.
-
-The pairing QR expires after 15 minutes. Settings can re-open pairing. Resetting a secret URL in Google Calendar invalidates its old copy.
-
-## Browser UI preview
-
-To inspect the layout without a TV, open the separately included `RoomCalendar-TV-Preview.html` in a browser. This is **just a demo** with placeholder events; actual Google iCal syncing requires the APK.
-
-## Build on GitHub Actions (no Android Studio needed)
-
-If you put this source folder in a GitHub repository and enable Actions, run the `Build Android TV APK` workflow. It builds an Android debug APK and publishes it as a downloadable workflow artifact. No app backend or deployment server is needed.
-
-## Set up your Google Calendar URL
-
-On **a desktop browser**, go to Google Calendar > Settings > Settings for my calendars > **choose your calendar** > Integrate calendar > **Secret address in iCal format** > Copy. This is not the public address. Some Google Workspace administrators disable secret iCal links.
-
-**Only `https://calendar.google.com/calendar/ical/... .ics` URLs** are accepted in this MVP. You can add multiple feeds or other providers in a later version.
-
-## Build & install using Android Studio
-
-1. Install Android Studio and let it install Android SDK Platform 35. Open this folder as an Android project. A small, source-included Gradle bootstrap is bundled; on first sync it downloads and SHA-256-verifies the official Gradle 8.9 distribution.
-2. Wait for Gradle sync to finish. This project uses Android Gradle Plugin 8.7.3 and the ZXing QR Core dependency. Alternatively run `./gradlew assembleDebug` from Terminal.
-3. In Android Studio: **Build > Build APK(s)** (debug build). The APK will be at `app/build/outputs/apk/debug/app-debug.apk`.
-4. On an Android-based TV (Android 8.0+, API 26), enable developer options and USB/Network ADB debugging.
-5. With ADB installed on your computer, run:
-
-```sh
-adb connect YOUR_TV_IP:5555
-adb install -r app/build/outputs/apk/debug/app-debug.apk
-adb shell am start -n dev.roomcalendar.tv/.MainActivity
+```bash
+./gradlew assembleDebug
 ```
 
-On Fire TV, ADB settings and sideloading availability vary by OS and model. **Vega OS does not run Android APKs.**
+The APK is written to `app/build/outputs/apk/debug/app-debug.apk`. You can also open the project in Android Studio and run the `app` configuration.
 
-> `release` is temporarily signed with the debug key for local testing only. Do not publish it as a production build with this signing setup.
+GitHub Actions (`.github/workflows/build.yml`) builds the same APK on every push to `main` and every pull request, and uploads it as the `open-cal-debug-apk` artifact.
 
-## Alexa integration
+## Install on a TV
 
-This APK does **not** register a custom Alexa voice skill and cannot guarantee that Alexa will discover a sideloaded app by its name.
+1. Turn on developer options and ADB debugging on the TV. Menu names vary by device.
 
-A basic Alexa routine can turn a compatible Fire TV on/off (depending on device integration and HDMI-CEC), but automatic launching of this sideloaded APK may need an external device controller such as Home Assistant with ADB, which can execute:
+   | Platform | Unlock developer options | Turn on ADB |
+   | --- | --- | --- |
+   | Fire TV | Settings → My Fire TV → About → select the device name 7 times | Settings → My Fire TV → Developer Options → ADB Debugging |
+   | Android TV / Google TV | Settings → System → About → select *Android TV OS build* 7 times | Settings → System → Developer options → USB debugging |
 
-```sh
-adb shell am start -n dev.roomcalendar.tv/.MainActivity
-```
+2. Find the TV's IP address under its network settings, then connect. Accept the debugging prompt on the TV.
 
-For a 15-minute power-off, configure that in Alexa or Home Assistant, not within this app. Powering off the physical TV from an ordinary Android app is not generally supported. Do not configure unconditional shutdown if you also use the TV for video; a smart automation should verify the calendar app is still foregrounded.
+   ```bash
+   adb connect TV_IP:5555
+   ```
 
-## Architecture
+3. Install the APK.
 
-```
-Android TV app (Java Activity)
-  ├── Android WebView loads bundled assets/index.html (NO remote webpage)
-  ├── QR pairing HTTP server (TV LAN only, ephemeral)
-  ├── Calendar HTTPS fetch and iCal parser (device only)
-  └── Android Keystore encrypted preferences (device only)
-```
+   ```bash
+   ./gradlew installDebug
+   ```
 
-App is intentionally smaller and more dependency-free than a React/Capacitor app. It uses only one third-party Android library, ZXing Core, to generate QR codes. It does not require Google APIs, Firebase, OAuth, Node.js, or any server. It needs the TV to have internet for fresh calendar events.
+   Or install a prebuilt APK:
 
-## Known MVP limitations
+   ```bash
+   adb install -r app/build/outputs/apk/debug/app-debug.apk
+   ```
 
-- Not verified on your specific TV or physical Fire TV. Some manufacturers omit/incompatibly update WebView.
-- First public builds should upgrade the `targetSdk` and security configuration after TV compatibility testing.
-- ICAL RRULE parser covers common repeat patterns, but complex rules (`BYSETPOS`, `WKST`, intricate timezone transitions, unusual `VTIMEZONE`) may not render perfectly. A full RFC-compliant library is recommended before public release.
-- Google's private iCal feeds are not guaranteed to update in real time. This APK refreshes every 15 minutes, but Google may cache the feed longer.
-- One Google calendar feed at a time. No two-way event editing; no Google account login.
-- Pairing uses HTTP within your home LAN. Use only a trusted network or manual remote entry.
-- TV power-off and Alexa voice invocation are external integrations, not features provided by this APK.
+   If the install fails with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`, the installed copy was signed with a different debug key (a different machine or CI). Uninstall it first; you will need to pair the calendar again.
 
-## Build bootstrap provenance
+   ```bash
+   adb uninstall dev.opencal.tv
+   ```
 
-`gradle/wrapper/gradle-wrapper.jar` is a **small custom bootstrap**, not the official Gradle wrapper jar. Its complete Java source is in `tools/wrapper/GradleWrapperMain.java`. It fetches only the official Gradle 8.9 binary distribution and verifies SHA-256 against the upstream published checksum before extracting or running it. You can replace it with the official Gradle wrapper if you prefer.
+4. Launch. The app also appears in the TV's app list. The same command works from home-automation tools that can run ADB commands.
+
+   ```bash
+   adb shell am start -n dev.opencal.tv/.MainActivity
+   ```
+
+## Connect a calendar
+
+1. In Google Calendar on the web, open **Settings → (your calendar) → Integrate calendar** and copy **Secret address in iCal format**. Google Workspace admins can disable this option.
+2. On the TV, scan the QR code with a phone on the same Wi-Fi network, paste the address and submit. If QR pairing isn't available, type the address into the field on the TV with the remote.
+
+Only `https://calendar.google.com/calendar/ical/….ics` addresses are accepted. To switch calendars, open settings and select **Connect another calendar**.
+
+## Remote controls
+
+| Key | Action |
+| --- | --- |
+| D-pad, OK | Move between buttons and press them |
+| Menu | Open or close settings |
+| Rewind / Fast-forward | Previous / next day |
+| Back | Close settings, return to today, or leave the pairing screen |
+| Home | Leave the app |
+
+## Development
+
+### Project layout
+
+| Path | Purpose |
+| --- | --- |
+| `app/src/main/java/dev/opencal/tv/MainActivity.java` | Hosts the WebView, the JS bridge, the sync loop and remote key handling |
+| `app/src/main/java/dev/opencal/tv/IcalReader.java` | Downloads the feed and parses events, including recurrences |
+| `app/src/main/java/dev/opencal/tv/PairingServer.java` | Temporary HTTP server that serves the QR pairing form |
+| `app/src/main/java/dev/opencal/tv/Secrets.java` | Keystore-backed encrypted preferences |
+| `app/src/main/assets/` | The UI: `index.html`, `app.js`, `style.css` |
+
+The only third-party dependency is ZXing Core, which draws the QR code.
+
+### Native ↔ web bridge
+
+The UI is a static page loaded from the APK's assets. `MainActivity` blocks all navigation away from it.
+
+- **JS → native:** `window.OpenCalNative` exposes `ready()`, `refresh()`, `pair()`, `cancelPairing()`, `save(url)`, `disconnect()`, `preview()` and `exitPreview()`.
+- **Native → JS:** every state change calls `OpenCalUI.receive(state)` with the full state: `paired`, `hasFeed`, `demo`, `pairingUrl`, `qr`, `events`, `loading`, `error`, `lastSynced` and `timeZone`. Each event is `{id, title, start, end, allDay, location}`, with times in epoch milliseconds.
+
+### Working on the UI in a browser
+
+Open `app/src/main/assets/index.html` in Chrome. Without the native bridge the page renders sample events. Add `?pair=1` to the URL to see the pairing screen.
+
+### Release builds
+
+`./gradlew assembleRelease` signs with the debug key so it can be sideloaded. Configure a real signing key before distributing the app.
+
+## Security
+
+- The secret iCal address grants read-only access to the calendar. Treat it like a password; resetting it in Google Calendar revokes old copies.
+- The app stores the address and cached events encrypted (AES-GCM, key held in Android Keystore). App backups are disabled.
+- Feed requests go only to `calendar.google.com` over HTTPS, and every redirect is checked against the same rule.
+- The pairing form is plain HTTP on port 8765. It needs a random one-time token, accepts one submission and closes after 15 minutes. Anyone who can see traffic on the local network during pairing could read the address, so pair on a trusted network or type the address with the remote.
+
+## Limitations
+
+- Shows one calendar, read-only.
+- Loads events from 7 days back to 45 days ahead.
+- Supports repeating events with `DAILY`, `WEEKLY`, `MONTHLY` or `YEARLY` frequency and `INTERVAL`, `COUNT`, `UNTIL`, `BYDAY`, `BYMONTHDAY` and `BYMONTH`. Also supports `EXDATE`, `RDATE` and moved single occurrences (`RECURRENCE-ID`). `BYSETPOS`, `WKST`, `BYWEEKNO` and `BYYEARDAY` are not supported.
+- Google can take several hours to update a secret iCal feed, so recent edits may not show up at the next sync.
+- `targetSdk` is 28, which is fine for sideloading but too old for app-store distribution.
+- Not yet verified on physical Fire TV hardware.

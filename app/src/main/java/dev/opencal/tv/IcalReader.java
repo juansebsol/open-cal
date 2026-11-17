@@ -1,4 +1,4 @@
-package dev.roomcalendar.tv;
+package dev.opencal.tv;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -52,7 +52,7 @@ final class IcalReader {
             conn.setReadTimeout(25_000);
             conn.setInstanceFollowRedirects(false);
             conn.setRequestProperty("Accept", "text/calendar, text/plain;q=0.7");
-            conn.setRequestProperty("User-Agent", "RoomCalendarTV/0.1");
+            conn.setRequestProperty("User-Agent", "OpenCal/0.2");
             try {
                 int status = conn.getResponseCode();
                 if (status >= 300 && status < 400) {

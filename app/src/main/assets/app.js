@@ -1,4 +1,4 @@
-/* Room Calendar TV — no frontend framework, runtime CDN, service, or remote JS. */
+/* Open Cal TV UI. Plain JavaScript: no framework, CDN or remote code. */
 (function () {
   'use strict';
   const $ = id => document.getElementById(id);
@@ -22,7 +22,7 @@
   };
   const state = {
     paired:false, demo:false, pairingUrl:'', qr:'', events:[], error:'', loading:false,lastSynced:0,
-    day:today(), settings:false, confirmRemove:false, timeZone:'', manual:false,
+    day:today(), settings:false, confirmRemove:false, timeZone:'', hasFeed:false,
   };
   function selectedDate(){return new Date(state.day+'T12:00:00')}
   function eventsForDay(day) {
@@ -40,11 +40,16 @@
     let mondayOffset=(first.getDay()+6)%7;
     let start=new Date(first);start.setDate(1-mondayOffset);
     let cells=['M','T','W','T','F','S','S'].map(day=>`<span class="mini-week">${day}</span>`).join('');
-    const occupied = new Set(state.events.map(e=>dayOf(e.start)));
+    // Mark every day an event touches (end is exclusive), not just its first day.
+    const occupied = new Set();
+    for (const e of state.events) {
+      const last = dayOf(Math.max(e.start, e.end - 1));
+      for (let key = dayOf(e.start), i = 0; key <= last && i < 62; key = addDays(key, 1), i++) occupied.add(key);
+    }
     for(let i=0;i<42;i++) {
       const day=new Date(start);day.setDate(start.getDate()+i);
       const key=ymd(day), dim=day.getMonth()!==d.getMonth(), now=key===today();
-      cells+=`<button class="mini-day ${dim?'outside':''} ${key===state.day?'current':''} ${now?'now':''} ${occupied.has(key)?'has':''}" onclick="RoomUI.pick('${key}')" title="${esc(key)}">${day.getDate()}</button>`;
+      cells+=`<button class="mini-day ${dim?'outside':''} ${key===state.day?'current':''} ${now?'now':''} ${occupied.has(key)?'has':''}" onclick="OpenCalUI.pick('${key}')" title="${esc(key)}">${day.getDate()}</button>`;
     }
     const title=new Intl.DateTimeFormat('en-US',{month:'long',year:'numeric'}).format(d);
     return `<section class="panel mini"><div class="mini-title"><span>${esc(title)}</span><span style="color:#a7b3c1;font-weight:500;font-size:13px">${state.timeZone?'Local time':''}</span></div><div class="mini-grid">${cells}</div></section>`;
@@ -61,13 +66,13 @@
     const weekday=new Intl.DateTimeFormat('en-US',{weekday:'long'}).format(day);
     return `<div class="app">
       <header class="topbar">
-        <div class="brand"><div class="brandmark">${icon('calendar')}</div><div><div class="brandname">Room Calendar</div><div class="brandtag">Your day, beautifully simple</div></div></div>
+        <div class="brand"><div class="brandmark">${icon('calendar')}</div><div><div class="brandname">Open Cal</div></div></div>
         <div class="nav">
-          <button class="nav-pill" onclick="RoomUI.today()" title="Jump to today">Today</button>
-          <button class="iconbutton" onclick="RoomUI.navigate(-1)" title="Previous day">${icon('chevronLeft')}</button>
-          <button class="iconbutton" onclick="RoomUI.navigate(1)" title="Next day">${icon('chevronRight')}</button>
-          <button class="iconbutton" onclick="RoomUI.refresh()" title="Refresh calendar">${icon('refresh')}</button>
-          <button class="iconbutton" onclick="RoomUI.toggleSettings()" title="Settings (Menu button)">${icon('settings')}</button>
+          <button class="nav-pill" onclick="OpenCalUI.today()" title="Jump to today">Today</button>
+          <button class="iconbutton" onclick="OpenCalUI.navigate(-1)" title="Previous day">${icon('chevronLeft')}</button>
+          <button class="iconbutton" onclick="OpenCalUI.navigate(1)" title="Next day">${icon('chevronRight')}</button>
+          <button class="iconbutton" onclick="OpenCalUI.refresh()" title="Refresh calendar">${icon('refresh')}</button>
+          <button class="iconbutton" onclick="OpenCalUI.toggleSettings()" title="Settings (Menu button)">${icon('settings')}</button>
           <div class="clock"><div id="liveClock"></div><div id="liveDate"></div></div>
         </div>
       </header>
@@ -83,7 +88,7 @@
           <div class="calendar-body"><div id="timeline" class="timeline">${timelineMarkup(timed,state.day)}</div></div>
         </section>
       </div>
-      <footer class="footer"><div class="status ${statusColor}"><span class="dot"></span>${esc(status)}${state.error?` · ${esc(state.error)}`:''}</div><div>Read-only · Private on your device · Use remote to navigate</div></footer>
+      <footer class="footer"><div class="status ${statusColor}"><span class="dot"></span>${esc(status)}${state.error?` · ${esc(state.error)}`:''}</div></footer>
       ${state.settings?settingsMarkup():''}
     </div>`;
   }
@@ -142,48 +147,60 @@
   function settingsMarkup() {
     const last=state.lastSynced?new Date(state.lastSynced).toLocaleString():'Not synced yet';
     return `<div class="settings-backdrop"><section class="settings" aria-label="Calendar settings">
-      <button class="close" onclick="RoomUI.toggleSettings()" aria-label="Close">×</button>
-      <h2>Calendar settings</h2><p>All calendar data stays on this Android TV. Nothing is sent to a Room Calendar server.</p>
+      <button class="close" onclick="OpenCalUI.toggleSettings()" aria-label="Close">×</button>
+      <h2>Calendar settings</h2><p>Calendar data is stored encrypted on this TV. The only network request is to Google for your calendar feed.</p>
       <p><strong>Last sync:</strong> ${esc(last)}<br/><strong>Time zone:</strong> ${esc(state.timeZone||'Device time zone')}<br/><strong>Sync:</strong> Every 15 minutes while the app is open</p>
       ${state.error?`<div class="notice">${esc(state.error)}</div>`:''}
       <div class="settings-list">
-        <button class="action primary" onclick="RoomUI.refresh()">Refresh now</button>
-        <button class="action" onclick="RoomUI.repair()">Connect another calendar</button>
-        ${state.demo?'<button class="action" onclick="RoomUI.leaveDemo()">Exit demo</button>':''}
-        <button class="action danger" onclick="RoomUI.remove()">${state.confirmRemove?'Confirm remove':'Remove calendar'}</button>
+        <button class="action primary" onclick="OpenCalUI.refresh()">Refresh now</button>
+        <button class="action" onclick="OpenCalUI.repair()">Connect another calendar</button>
+        ${state.demo?'<button class="action" onclick="OpenCalUI.leaveDemo()">Exit demo</button>':''}
+        <button class="action danger" onclick="OpenCalUI.remove()">${state.confirmRemove?'Confirm remove':'Remove calendar'}</button>
       </div>
-      <p style="font-size:12px;margin-bottom:0">Tip: Press Menu on your remote to open settings, or use the buttons at the top of the screen. TV power-off is controlled separately through Alexa.</p>
+      <p style="font-size:12px;margin-bottom:0">Menu opens settings. Rewind and fast-forward change the day. Back returns to today.</p>
     </section></div>`;
   }
   function pairingMarkup() {
     const address=state.pairingUrl||'';
     return `<section class="pair-screen">
-      <header class="pair-top"><div class="brand"><div class="brandmark">${icon('calendar')}</div><div><div class="brandname">Room Calendar</div><div class="brandtag">Your day, beautifully simple</div></div></div></header>
+      <header class="pair-top"><div class="brand"><div class="brandmark">${icon('calendar')}</div><div><div class="brandname">Open Cal</div></div></div></header>
       <div class="pair-layout">
         <div class="pair-copy"><div class="eyebrow">Connect your calendar</div><h1 class="pair-headline">Your day.<br/><em>On the big screen.</em></h1>
           <p class="pair-lead">Connect a private Google Calendar feed once. Your schedule will update automatically.</p>
           <div class="pair-steps"><div class="pair-step"><span class="stepnum">1</span><span>Open <b>Google Calendar settings</b> on a computer.</span></div>
           <div class="pair-step"><span class="stepnum">2</span><span>Select your calendar → <b>Integrate calendar</b> → copy your <b>Secret address in iCal format</b>.</span></div>
           <div class="pair-step"><span class="stepnum">3</span><span>Scan the QR code with your phone, paste the secret address, and connect. Your TV will load your events.</span></div></div>
-          <div class="pair-actions"><button class="pair-action primary" onclick="RoomUI.preview()">Preview the calendar</button><button class="pair-action" onclick="RoomUI.newPairing()">New pairing code</button></div>
+          <div class="pair-actions"><button class="pair-action primary" onclick="OpenCalUI.preview()">Preview the calendar</button><button class="pair-action" onclick="OpenCalUI.newPairing()">New pairing code</button>${state.hasFeed?'<button class="pair-action" onclick="OpenCalUI.cancelPairing()">Back to calendar</button>':''}</div>
           ${state.error?`<p class="notice" style="margin-top:18px">${esc(state.error)}</p>`:''}
         </div>
         <div class="qr-card">
           <div class="qr-title">Pair your Google Calendar</div>
-          ${state.qr?`<img src="${state.qr}" alt="Scan to open pairing page on phone">`:'<div class="qr-fallback">No local network pairing is available.<br/>You can enter a calendar address using the TV remote below.</div>'}
+          ${state.qr?`<img src="${state.qr}" alt="Scan to open pairing page on phone">`:'<div class="qr-fallback">QR pairing isn’t available right now.<br/>Select New pairing code, or enter the address below.</div>'}
           <div class="qr-sub">Scan with your phone’s camera<br/>Both devices must use the same Wi-Fi.</div>
           ${address?`<div class="pair-url">${esc(address.replace(/t=.*/, 't=••••'))}</div>`:''}
-          <div class="manual"><input id="manualFeed" type="url" placeholder="Or paste your private iCal URL with the remote" spellcheck="false" autocomplete="off"/><button onclick="RoomUI.manualSave()">Connect using TV remote</button></div>
+          <div class="manual"><input id="manualFeed" type="url" placeholder="Or paste your private iCal URL with the remote" spellcheck="false" autocomplete="off"/><button onclick="OpenCalUI.manualSave()">Connect using TV remote</button></div>
         </div>
       </div>
 
     </section>`;
   }
   function render() {
+    // innerHTML replaces every node, so carry over focus, typed input and scroll position.
+    const active = document.activeElement;
+    const focusKey = active && active !== document.body ? (active.id || active.getAttribute('onclick')) : '';
+    const typed = $('manualFeed') ? $('manualFeed').value : '';
+    const oldBody = document.querySelector('.calendar-body');
+    const scrollTop = oldBody ? oldBody.scrollTop : 0;
     $('root').innerHTML = (!state.paired&&!state.demo)?pairingMarkup():mainLayout();
     headerClock();
+    const input = $('manualFeed'); if (input && typed) input.value = typed;
+    const body = document.querySelector('.calendar-body'); if (body) body.scrollTop = scrollTop;
+    if (focusKey) {
+      const el = [...$('root').querySelectorAll('[id],[onclick]')].find(e => e.id === focusKey || e.getAttribute('onclick') === focusKey);
+      if (el) el.focus();
+    }
   }
-  window.RoomUI = {
+  window.OpenCalUI = {
     receive(data) {
       Object.assign(state,data);
       // Keep user-selected day and modal state between background updates.
@@ -192,32 +209,41 @@
     pick(date){state.day=date;render()},
     navigate(offset){state.day=addDays(state.day,offset);render()},
     today(){state.day=today();render()},
-    refresh(){state.settings=false;render();if(window.RoomNative)RoomNative.refresh()},
+    refresh(){state.settings=false;render();if(window.OpenCalNative)OpenCalNative.refresh()},
     toggleSettings(){state.settings=!state.settings;state.confirmRemove=false;render()},
-    handleBack(){if(state.settings){state.settings=false;render()}else{state.day=today();render()}},
-    repair(){state.settings=false;state.paired=false;state.demo=false;render();if(window.RoomNative)RoomNative.pair()},
+    handleBack(){if(state.settings){state.settings=false;render()}else if(!state.paired&&!state.demo&&state.hasFeed){OpenCalUI.cancelPairing()}else{state.day=today();render()}},
+    cancelPairing(){if(window.OpenCalNative)OpenCalNative.cancelPairing()},
+    repair(){state.settings=false;state.paired=false;state.demo=false;render();if(window.OpenCalNative)OpenCalNative.pair()},
     remove(){
       if(!state.confirmRemove){state.confirmRemove=true;render();return}
       state.confirmRemove=false;state.settings=false;
-      if(window.RoomNative)RoomNative.disconnect();
+      if(window.OpenCalNative)OpenCalNative.disconnect();
     },
-    preview(){if(window.RoomNative)RoomNative.preview();else{state.demo=true;state.paired=false;state.events=fakeEvents();render()}},
-    leaveDemo(){if(window.RoomNative)RoomNative.exitPreview();else{state.demo=false;render()}},
-    newPairing(){if(window.RoomNative)RoomNative.pair()},
-    manualSave(){const el=$('manualFeed');if(!el||!el.value.trim())return;if(window.RoomNative)RoomNative.save(el.value.trim())},
+    preview(){if(window.OpenCalNative)OpenCalNative.preview();else{state.demo=true;state.paired=false;state.events=fakeEvents();render()}},
+    leaveDemo(){if(window.OpenCalNative)OpenCalNative.exitPreview();else{state.demo=false;render()}},
+    newPairing(){if(window.OpenCalNative)OpenCalNative.pair()},
+    manualSave(){const el=$('manualFeed');if(!el||!el.value.trim())return;if(window.OpenCalNative)OpenCalNative.save(el.value.trim())},
   };
   function fakeEvents(){
     const d=today(),blocks=[[9,0,9,30],[11,0,12,0],[14,0,15,30],[17,0,17,45]];
     const names=['Morning planning','Design review','Focus time','Project check-in'];
     return blocks.map((b,i)=>({id:'demo:'+i,title:names[i],start:new Date(`${d}T${pad(b[0])}:${pad(b[1])}:00`).getTime(),end:new Date(`${d}T${pad(b[2])}:${pad(b[3])}:00`).getTime(),allDay:false,location:''}));
   }
-  if(!window.RoomNative){
+  if(!window.OpenCalNative){
     state.events=fakeEvents();state.demo=true;state.paired=false;
     if(location.search.includes('pair')){state.demo=false;state.events=[];}
     render();
   } else {
     render();
-    RoomNative.ready();
+    OpenCalNative.ready();
   }
+  // Re-render each minute so the now line and "Coming up next" stay current,
+  // and follow the date at midnight if the viewer was looking at today.
+  let currentDay = today();
+  setInterval(() => {
+    const now = today();
+    if (now !== currentDay) { if (state.day === currentDay) state.day = now; currentDay = now; }
+    if (state.paired || state.demo) render();
+  }, 60*1000);
   setInterval(headerClock, 15*1000);
 })();

@@ -1,0 +1,1 @@
+To preview without building an APK, open `app/src/main/assets/index.html` in Chrome/Chromium. It displays sample appointments only. Add `?pair=1` to preview the onboarding screen. Android app loads the same bundled interface with real data from a local native bridge.

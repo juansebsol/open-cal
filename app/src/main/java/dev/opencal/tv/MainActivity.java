@@ -22,7 +22,6 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import java.io.ByteArrayOutputStream;
 import java.net.URI;
-import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.Map;
@@ -152,9 +151,10 @@ public class MainActivity extends Activity {
             feedUrl = ""; events = new JSONArray(); lastSynced = 0; lastError = ""; demo = false;
             beginPairing();
         }); }
+        /** Shows the UI's built-in sample week; app.js supplies the events while demo is true. */
         @JavascriptInterface public void preview() { ui.post(() -> {
             demo = true; pairingMode = false; pairing.close(); pairingUrl = ""; qr = "";
-            events = sampleEvents(); lastError = "";
+            events = new JSONArray(); lastError = "";
             notifyState();
         }); }
         @JavascriptInterface public void exitPreview() { ui.post(() -> {
@@ -287,26 +287,5 @@ public class MainActivity extends Activity {
             bitmap.recycle();
             return "data:image/png;base64," + Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP);
         } catch (Exception e) { return ""; }
-    }
-
-    private static JSONArray sampleEvents() {
-        JSONArray json = new JSONArray();
-        LocalDate today = LocalDate.now();
-        int[][] blocks = {{9, 0, 9, 30}, {11, 0, 12, 0}, {14, 0, 15, 30}, {17, 0, 17, 45}};
-        String[] titles = {"Morning planning", "Design review", "Focus time", "Project check-in"};
-        String[] locations = {"", "Conference call", "", ""};
-        for (int i = 0; i < blocks.length; i++) {
-            JSONObject item = new JSONObject();
-            try {
-                item.put("id", "demo:" + i);
-                item.put("title", titles[i]);
-                item.put("start", today.atTime(blocks[i][0], blocks[i][1]).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli());
-                item.put("end", today.atTime(blocks[i][2], blocks[i][3]).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli());
-                item.put("allDay", false);
-                item.put("location", locations[i]);
-                json.put(item);
-            } catch (Exception ignored) { }
-        }
-        return json;
     }
 }

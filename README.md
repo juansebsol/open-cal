@@ -1,8 +1,13 @@
 # Open Cal
 
-An Android TV / Fire TV app that shows a Google Calendar day view on a TV. It reads the calendar's secret iCal address directly, so there is no backend, no OAuth and no Google API key.
+An Android TV / Fire TV app that shows a Google Calendar day or week view on a TV. It reads the calendar's secret iCal address directly, so there is no backend, no OAuth and no Google API key.
 
-- Day timeline with overlapping events, all-day events, a current-time line, a month view and the next upcoming event
+![Day view](docs/screenshots/day-view.png)
+
+![Week view](docs/screenshots/week-view.png)
+
+- Day and week views that always fit the screen: the visible hours are fitted to the events and the layout scales to the TV's resolution, so nothing scrolls
+- Overlapping and all-day events, a current-time line, a month view and the next upcoming event
 - Syncs on launch and every 15 minutes while open; the last sync is cached for offline use
 - Pairs by QR code: the TV serves a one-time form on the local network that you open on your phone
 - Feed URL and cached events are encrypted with an Android Keystore key
@@ -76,8 +81,8 @@ Only `https://calendar.google.com/calendar/ical/….ics` addresses are accepted.
 | --- | --- |
 | D-pad, OK | Move between buttons and press them |
 | Menu | Open or close settings |
-| Rewind / Fast-forward | Previous / next day |
-| Back | Close settings, return to today, or leave the pairing screen |
+| Rewind / Fast-forward | Previous / next day, or week in Week view |
+| Back | Close settings, return to today's Day view, or leave the pairing screen |
 | Home | Leave the app |
 
 ## Development
@@ -99,11 +104,13 @@ The only third-party dependency is ZXing Core, which draws the QR code.
 The UI is a static page loaded from the APK's assets. `MainActivity` blocks all navigation away from it.
 
 - **JS → native:** `window.OpenCalNative` exposes `ready()`, `refresh()`, `pair()`, `cancelPairing()`, `save(url)`, `disconnect()`, `preview()` and `exitPreview()`.
-- **Native → JS:** every state change calls `OpenCalUI.receive(state)` with the full state: `paired`, `hasFeed`, `demo`, `pairingUrl`, `qr`, `events`, `loading`, `error`, `lastSynced` and `timeZone`. Each event is `{id, title, start, end, allDay, location}`, with times in epoch milliseconds.
+- **Native → JS:** every state change calls `OpenCalUI.receive(state)` with the full state: `paired`, `hasFeed`, `demo`, `pairingUrl`, `qr`, `events`, `loading`, `error`, `lastSynced` and `timeZone`. Each event is `{id, title, start, end, allDay, location}`, with times in epoch milliseconds. While `demo` is true the UI shows its built-in sample week instead of `events`.
 
 ### Working on the UI in a browser
 
-Open `app/src/main/assets/index.html` in Chrome. Without the native bridge the page renders sample events. Add `?pair=1` to the URL to see the pairing screen.
+Open `app/src/main/assets/index.html` in Chrome. Without the native bridge the page shows a sample week. Add `?view=week` to the URL to open the week view, or `?pair=1` to see the pairing screen.
+
+The calendar is sized in `rem`, and `1rem` is 1/120 of the window width (16px at 1920×1080). Resize the window to preview any TV resolution; many 1080p TVs report 960×540 to the WebView.
 
 ### Release builds
 

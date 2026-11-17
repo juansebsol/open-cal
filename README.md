@@ -123,4 +123,3 @@ Open `app/src/main/assets/index.html` in Chrome. Without the native bridge the p
 - Supports repeating events with `DAILY`, `WEEKLY`, `MONTHLY` or `YEARLY` frequency and `INTERVAL`, `COUNT`, `UNTIL`, `BYDAY`, `BYMONTHDAY` and `BYMONTH`. Also supports `EXDATE`, `RDATE` and moved single occurrences (`RECURRENCE-ID`). `BYSETPOS`, `WKST`, `BYWEEKNO` and `BYYEARDAY` are not supported.
 - Google can take several hours to update a secret iCal feed, so recent edits may not show up at the next sync.
 - `targetSdk` is 28, which is fine for sideloading but too old for app-store distribution.
-- Not yet verified on physical Fire TV hardware.
